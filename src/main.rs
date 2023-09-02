@@ -9,16 +9,7 @@ fn main() {
         return;
     }
     let file_path=&args[1];
-    let headr=parser::file::file_utils::read_file_range(file_path,0,64);
-    match headr {
-        Ok(data) => {
-            
-        }
-        Err(error) => {
-            println!("[!]read file fail");
-            return;
-        }
-    }
+    parser::elf_header::elf_header::read_file_range(file_path);
 
 
 

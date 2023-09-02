@@ -1,14 +1,11 @@
-
+use crate::parser::abi;
 
 pub enum Class {
     ELF32,
     ELF64,
 }
 
-/// C-style 32-bit ELF File Header definition
-///
-/// These C-style definitions are for users who want to implement their own ELF manipulation logic.
-#[derive(Debug)]
+
 #[repr(C)]
 pub struct Elf32_Ehdr {
     pub e_ident: [u8; abi::EI_NIDENT],
@@ -27,10 +24,6 @@ pub struct Elf32_Ehdr {
     pub e_shstrndx: u16,
 }
 
-/// C-style 64-bit ELF File Header definition
-///
-/// These C-style definitions are for users who want to implement their own ELF manipulation logic.
-#[derive(Debug)]
 #[repr(C)]
 pub struct Elf64_Ehdr {
     pub e_ident: [u8; abi::EI_NIDENT],
@@ -52,7 +45,46 @@ pub struct Elf64_Ehdr {
 
 
 pub mod elf_header{
+    use crate::parser::{abi, file};
+    fn verify_magic(data:Vec<u8>)->bool{
+        if data[0] == abi::ELFMAG0 && data[1] == abi::ELFMAG1 && data[2] == abi::ELFMAG2 && data[3] == abi::ELFMAG3{
+            return true;
+        }
+        return  false;
+    }
 
+    fn parse_ident(data:Vec<u8>)->bool{
+        //验证.ELF魔数
+        if !verify_magic(data){
+            return false;
+        }
+
+
+
+        return true;
+    }
+
+
+    pub fn read_file_range(file_path:&str)->bool{
+        //首先读取64位数的字节数
+        let headr=file::file_utils::read_file_range(file_path,0,64);
+
+        match headr {
+            Ok(data) => {
+                //验证读取的字节数是否对应目标
+                if data.len()!=64{
+                    return false;
+                }
+                return  true;
+            }
+            Err(error) => {
+                println!("[!]read file fail");
+                return false;
+            }
+        }
+        return false;
+
+    }
 
 
 }
