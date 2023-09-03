@@ -47,3 +47,14 @@ pub struct ProgramHeader {
     pub p_align: u64,
 }
 
+impl ProgramHeader {
+    /// Helper method which uses checked integer math to get a tuple of (start, end) for
+    /// the location in bytes for this ProgramHeader's data in the file.
+    /// i.e. (p_offset, p_offset + p_filesz)
+    pub(crate) fn get_file_data_range(&self) -> (usize, usize){
+        let start: usize = self.p_offset.try_into().expect("Failed to convert u64 to usize");
+        let size: usize = self.p_filesz.try_into().expect("Failed to convert u64 to usize");
+        let end=start+size;
+        return  (start, end);
+    }
+}
