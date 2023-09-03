@@ -1,4 +1,4 @@
-use crate::parser::abi;
+use crate::parser::{abi, file};
 
 pub enum Class {
     ELF32,
@@ -44,20 +44,33 @@ pub struct Elf64_Ehdr {
 
 
 
-pub mod elf_header{
-    use crate::parser::{abi, file};
-    fn verify_magic(data:Vec<u8>)->bool{
-        if data[0] == abi::ELFMAG0 && data[1] == abi::ELFMAG1 && data[2] == abi::ELFMAG2 && data[3] == abi::ELFMAG3{
+pub mod elf_header {
+    use std::string::ParseError;
+    use crate::parser::{abi, endian, file};
+    use crate::parser::elf_header::Class;
+    use crate::parser::endian::EndianParse;
+
+    fn verify_magic(data: Vec<u8>) -> bool {
+        if data[0] == abi::ELFMAG0 && data[1] == abi::ELFMAG1 && data[2] == abi::ELFMAG2 && data[3] == abi::ELFMAG3 {
             return true;
         }
-        return  false;
+        return false;
     }
 
-    fn parse_ident(data:Vec<u8>)->bool{
+    fn parse_ident(data: Vec<u8>) -> bool {
         //验证.ELF魔数
-        if !verify_magic(data){
+        if !verify_magic(data.clone()) {
             return false;
         }
+
+       let endian_type=data[abi::EI_DATA];
+       //获取大小端写法
+        let endian_self=endian::AnyEndian::new(endian_type);
+        //获取elf位数
+        let elf_class=data[abi::EI_CLASS];
+
+
+
 
 
 
@@ -65,17 +78,18 @@ pub mod elf_header{
     }
 
 
-    pub fn read_file_range(file_path:&str)->bool{
+    pub fn read_file_range(file_path: &str) -> bool {
         //首先读取64位数的字节数
-        let headr=file::file_utils::read_file_range(file_path,0,64);
+        let headr = file::file_utils::read_file_range(file_path, 0, 64);
 
         match headr {
             Ok(data) => {
+                println!("{}",data.len());
                 //验证读取的字节数是否对应目标
-                if data.len()!=64{
+                if data.len() != 65 {
                     return false;
                 }
-                return  true;
+                return  parse_ident(data);
             }
             Err(error) => {
                 println!("[!]read file fail");
@@ -83,8 +97,5 @@ pub mod elf_header{
             }
         }
         return false;
-
     }
-
-
 }
