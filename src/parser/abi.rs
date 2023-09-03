@@ -17,3 +17,10 @@ pub const ELFDATANONE: u8 = 0;
 pub const ELFDATA2LSB: u8 = 1;
 /// 2's complement values, with the most significant byte occupying the lowest address.
 pub const ELFDATA2MSB: u8 = 2;
+
+
+/// 32-bit ELF file
+pub const ELFCLASS32: u8 = 1;
+/// 64-bit ELF file
+pub const ELFCLASS64: u8 = 2;
+

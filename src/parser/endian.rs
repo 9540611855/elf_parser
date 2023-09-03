@@ -1,6 +1,6 @@
 use std::string::ParseError;
 use crate::parser::abi;
-
+#[derive(Debug,Copy,Clone)]
 pub struct  AnyEndian {
     pub endian_type:u8,
 }
@@ -28,7 +28,6 @@ pub trait EndianParse{
         let end=offset+SIZE;
         let opbuf= data.get(offset..end);
         let buf = opbuf.unwrap().try_into().unwrap();
-
 
         if Self::is_little(self){
             return u16::from_le_bytes(buf);

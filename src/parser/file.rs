@@ -1,3 +1,7 @@
+pub enum Class {
+    ELF32,
+    ELF64,
+}
 pub mod file_utils{
     use std::fs::File;
     use std::io::{self, Read, Seek, SeekFrom};
@@ -17,7 +21,6 @@ pub mod file_utils{
 
         // 读取文件中的字节到缓冲区
         file.read_exact(&mut buffer)?;
-
         Ok(buffer)
     }
 
