@@ -13,9 +13,10 @@ pub mod file_utils{
 
         // 设置文件的读取偏移量
         file.seek(SeekFrom::Start(start_offset))?;
-
+        //println!("{}",end_offset);
+        //println!("{}",start_offset);
         // 计算要读取的字节数
-        let num_bytes = (end_offset - start_offset + 1) as usize;
+        let num_bytes = (end_offset - start_offset) as usize;
 
         // 创建一个缓冲区来存储读取的字节
         let mut buffer = vec![0; num_bytes];

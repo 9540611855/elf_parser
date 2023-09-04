@@ -75,13 +75,13 @@ impl ProgramHeader {
                let p_offset= endian.parse_u32_at(offset, data)as u64;
                 offset+=U32SIZE;
                let p_vaddr=endian.parse_u32_at(offset, data) as u64;
-                offset+=U64SIZE;
+                offset+=U32SIZE;
                let p_paddr=endian.parse_u32_at(offset, data) as u64;
-                offset+=U64SIZE;
+                offset+=U32SIZE;
                let p_filesz=endian.parse_u32_at(offset, data) as u64;
-                offset+=U64SIZE;
+                offset+=U32SIZE;
                let p_memsz= endian.parse_u32_at(offset, data) as u64;
-                offset+=U64SIZE;
+                offset+=U32SIZE;
                let p_flags= endian.parse_u32_at(offset, data);
                 offset+=U32SIZE;
                let p_align= endian.parse_u32_at(offset, data) as u64;
@@ -99,6 +99,7 @@ impl ProgramHeader {
 
         // Note: 64-bit fields are in a different order
         let p_type = endian.parse_u32_at(offset, data);
+
         offset+=U32SIZE;
         let p_flags = endian.parse_u32_at(offset, data);
         offset+=U32SIZE;
@@ -126,7 +127,7 @@ impl ProgramHeader {
         });
     }
 
-    fn size_for(class: Class) -> usize {
+    pub(crate) fn size_for(class: Class) -> usize {
         match class {
             Class::ELF32 => 32,
             Class::ELF64 => 56,

@@ -205,7 +205,7 @@ pub mod elf_header {
 
     pub fn read_file_range(file_path: &str) -> bool {
         //首先读取64位数的字节数
-        let headr = file::file_utils::read_file_range(file_path, 0, 15);
+        let headr = file::file_utils::read_file_range(file_path, 0, 16);
 
         match headr {
             Ok(data) => {
@@ -220,18 +220,26 @@ pub mod elf_header {
                 }
                let ident=parse_ident(data);
                 let idents=ident.clone().unwrap();
+                let (endian,class)=ident.clone().unwrap();
                 let idents1=ident.expect("REASON").clone();
                 let header_size = match idents.1{
                     Class::ELF32 =>0x34,
                     Class::ELF64 => 0x40,
                 };
+
                 let headr = file::file_utils::read_file_range(file_path, 0, header_size);
                 //读取文件头
                 let binary_header=file_header(idents,&headr.unwrap());
                 println!("{:?}", binary_header);
                 //获取segment头
-
-                let program_header=ProgramHeader::parse_at(idents1, 0, &[]);
+                let program_header_offset=header_size.clone();
+                let program_header_end=header_size.clone()+ProgramHeader::size_for(class) as u64;
+                let binary_header=file::file_utils::read_file_range(file_path,program_header_offset,program_header_end);
+                println!("{}",program_header_end);
+                println!("{}",program_header_offset);
+                //println!("{:?}",binary_header.expect("REASON").len());
+                let program_header=ProgramHeader::parse_at(idents1, 0, &binary_header.unwrap());
+                println!("{:?}",program_header);
 
 
 
