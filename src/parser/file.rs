@@ -1,3 +1,4 @@
+#[derive(PartialEq)]
 pub enum Class {
     ELF32,
     ELF64,

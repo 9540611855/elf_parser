@@ -108,6 +108,7 @@ pub mod elf_header {
     use crate::parser::{abi, endian, file};
     use crate::parser::elf_header::{Class, FileHeader};
     use crate::parser::endian::{AnyEndian, EndianParse};
+    use crate::parser::segment::ProgramHeader;
 
     fn verify_magic(data: Vec<u8>) -> bool {
         if data[0] == abi::ELFMAG0 && data[1] == abi::ELFMAG1 && data[2] == abi::ELFMAG2 && data[3] == abi::ELFMAG3 {
@@ -227,8 +228,13 @@ pub mod elf_header {
                     Class::ELF64 => 0x40,
                 };
                 let headr = file::file_utils::read_file_range(file_path, 0, header_size);
+                //读取文件头
                 let binary_header=file_header(idents,&headr.unwrap());
                 println!("{:?}", binary_header);
+                //获取segment头
+
+                let program_header=ProgramHeader::parse_at(idents, 0, &[]);
+
 
 
             }

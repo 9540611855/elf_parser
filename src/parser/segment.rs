@@ -1,3 +1,5 @@
+use crate::parser::endian::{AnyEndian, EndianParse};
+use crate::parser::file::Class;
 #[derive(Debug)]
 #[repr(C)]
 pub struct Elf32_Phdr {
@@ -56,5 +58,78 @@ impl ProgramHeader {
         let size: usize = self.p_filesz.try_into().expect("Failed to convert u64 to usize");
         let end=start+size;
         return  (start, end);
+    }
+    pub(crate) fn parse_at(
+        ident: (AnyEndian, Class),
+        mut offset:usize,
+        data: &[u8],
+    ) -> Self{
+        let (endian, class)=ident;
+        const U64SIZE: usize = core::mem::size_of::<u64>();
+        const U32SIZE: usize = core::mem::size_of::<u32>();
+        const U16SIZE: usize = core::mem::size_of::<u16>();
+        const U8SIZE: usize = core::mem::size_of::<u8>();
+        if class == Class::ELF32 {
+               let p_type= endian.parse_u32_at(offset, data);
+               offset+=U32SIZE;
+               let p_offset= endian.parse_u32_at(offset, data)as u64;
+                offset+=U32SIZE;
+               let p_vaddr=endian.parse_u32_at(offset, data) as u64;
+                offset+=U64SIZE;
+               let p_paddr=endian.parse_u32_at(offset, data) as u64;
+                offset+=U64SIZE;
+               let p_filesz=endian.parse_u32_at(offset, data) as u64;
+                offset+=U64SIZE;
+               let p_memsz= endian.parse_u32_at(offset, data) as u64;
+                offset+=U64SIZE;
+               let p_flags= endian.parse_u32_at(offset, data);
+                offset+=U32SIZE;
+               let p_align= endian.parse_u32_at(offset, data) as u64;
+            return Ok(ProgramHeader {
+                p_type,
+                p_offset,
+                p_vaddr,
+                p_paddr,
+                p_filesz,
+                p_memsz,
+                p_flags,
+                p_align,
+            });
+        }
+
+        // Note: 64-bit fields are in a different order
+        let p_type = endian.parse_u32_at(offset, data);
+        offset+=U32SIZE;
+        let p_flags = endian.parse_u32_at(offset, data);
+        offset+=U32SIZE;
+        let p_offset = endian.parse_u64_at(offset, data);
+        offset+=U64SIZE;
+        let p_vaddr = endian.parse_u64_at(offset, data);
+        offset+=U64SIZE;
+        let p_paddr = endian.parse_u64_at(offset, data);
+        offset+=U64SIZE;
+        let p_filesz = endian.parse_u64_at(offset, data);
+        offset+=U64SIZE;
+        let p_memsz = endian.parse_u64_at(offset, data);
+        offset+=U64SIZE;
+        let p_align = endian.parse_u64_at(offset, data);
+        offset+=U64SIZE;
+        Ok(ProgramHeader {
+            p_type,
+            p_offset,
+            p_vaddr,
+            p_paddr,
+            p_filesz,
+            p_memsz,
+            p_flags,
+            p_align,
+        })
+    }
+
+    fn size_for(class: Class) -> usize {
+        match class {
+            Class::ELF32 => 32,
+            Class::ELF64 => 56,
+        }
     }
 }
