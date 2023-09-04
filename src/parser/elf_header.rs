@@ -1,11 +1,8 @@
 use crate::parser::{abi, file};
 use crate::parser::endian::{AnyEndian, EndianParse};
+use crate::parser::file::Class;
+
 #[derive(Debug,PartialEq)]
-pub enum Class {
-    ELF32,
-    ELF64,
-}
-#[derive(Debug)]
 pub struct FileHeader {
     /// 32-bit vs 64-bit
     pub class: Class,
@@ -222,7 +219,8 @@ pub mod elf_header {
                     return false;
                 }
                let ident=parse_ident(data);
-                let idents=ident.unwrap();
+                let idents=ident.clone().unwrap();
+                let idents1=ident.expect("REASON").clone();
                 let header_size = match idents.1{
                     Class::ELF32 =>0x34,
                     Class::ELF64 => 0x40,
@@ -233,7 +231,7 @@ pub mod elf_header {
                 println!("{:?}", binary_header);
                 //获取segment头
 
-                let program_header=ProgramHeader::parse_at(idents, 0, &[]);
+                let program_header=ProgramHeader::parse_at(idents1, 0, &[]);
 
 
 

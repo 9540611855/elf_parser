@@ -85,7 +85,7 @@ impl ProgramHeader {
                let p_flags= endian.parse_u32_at(offset, data);
                 offset+=U32SIZE;
                let p_align= endian.parse_u32_at(offset, data) as u64;
-            return Ok(ProgramHeader {
+            return (ProgramHeader {
                 p_type,
                 p_offset,
                 p_vaddr,
@@ -114,7 +114,7 @@ impl ProgramHeader {
         offset+=U64SIZE;
         let p_align = endian.parse_u64_at(offset, data);
         offset+=U64SIZE;
-        Ok(ProgramHeader {
+        return (ProgramHeader {
             p_type,
             p_offset,
             p_vaddr,
@@ -123,7 +123,7 @@ impl ProgramHeader {
             p_memsz,
             p_flags,
             p_align,
-        })
+        });
     }
 
     fn size_for(class: Class) -> usize {

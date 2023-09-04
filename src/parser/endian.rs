@@ -1,6 +1,6 @@
 use std::string::ParseError;
 use crate::parser::abi;
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug,Copy,Clone,PartialEq)]
 pub struct  AnyEndian {
     pub endian_type:u8,
 }

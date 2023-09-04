@@ -1,4 +1,4 @@
-#[derive(PartialEq)]
+#[derive(PartialEq,Debug,Clone)]
 pub enum Class {
     ELF32,
     ELF64,
