@@ -1,3 +1,4 @@
+use crate::parser::elf_header::FileHeader;
 use crate::parser::endian::{AnyEndian, EndianParse};
 use crate::parser::file::Class;
 #[derive(Debug)]
@@ -58,6 +59,16 @@ impl ProgramHeader {
         let size: usize = self.p_filesz.try_into().expect("Failed to convert u64 to usize");
         let end=start+size;
         return  (start, end);
+    }
+    pub fn parse_program(ident: (AnyEndian, Class),program_bytes:Vec<u8>,e_phnum:u16,e_phsz:u16)->Vec<ProgramHeader>{
+        let mut v: Vec<ProgramHeader> = Vec::new();
+        for i in 0..e_phnum-1{
+            println!("{}",i);
+            println!("{}",i*e_phsz);
+            let e_phdr=Self::parse_at(ident, (i * e_phsz) as usize, program_bytes.as_slice());
+            v.push(e_phdr);
+        }
+        return  v;
     }
     pub(crate) fn parse_at(
         ident: (AnyEndian, Class),
@@ -132,5 +143,8 @@ impl ProgramHeader {
             Class::ELF32 => 32,
             Class::ELF64 => 56,
         }
+    }
+    pub fn check_program_size(binary_header:FileHeader,program_header:ProgramHeader)->bool{
+        return u64::from(binary_header.e_phentsize*binary_header.e_phnum)!= program_header.p_filesz;
     }
 }

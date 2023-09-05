@@ -234,12 +234,27 @@ pub mod elf_header {
                 //获取segment头
                 let program_header_offset=header_size.clone();
                 let program_header_end=header_size.clone()+ProgramHeader::size_for(class) as u64;
-                let binary_header=file::file_utils::read_file_range(file_path,program_header_offset,program_header_end);
+                let program_header=file::file_utils::read_file_range(file_path,program_header_offset,program_header_end);
                 println!("{}",program_header_end);
                 println!("{}",program_header_offset);
                 //println!("{:?}",binary_header.expect("REASON").len());
-                let program_header=ProgramHeader::parse_at(idents1, 0, &binary_header.unwrap());
+                let program_header=ProgramHeader::parse_at(idents1, 0, &program_header.unwrap());
                 println!("{:?}",program_header);
+
+
+                let program_bytes=file::file_utils::read_file_range(file_path,program_header.p_offset+ProgramHeader::size_for(class) as u64,program_header.p_offset+program_header.p_filesz);
+                println!("{:?}",program_bytes);
+                let e_phnum=binary_header.e_phnum;
+                let e_phsz=binary_header.e_phentsize;
+                if ProgramHeader::check_program_size(binary_header,program_header){
+                        println!("[!]ProgramHeader fail!");
+                        return false;
+                }
+
+                let vec_header=ProgramHeader::parse_program
+                    (idents1.clone(),program_bytes.unwrap(),e_phnum,e_phsz);
+                println!("{:?}",vec_header);
+                //解析section
 
 
 
