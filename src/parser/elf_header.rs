@@ -278,8 +278,8 @@ pub mod elf_header {
                 let string_map=parser::section::SectionHeader::parser_string_table(string_table_bytes.unwrap());
                 println!("{:?}",string_map);
                 //获取修复section header的名字
-
-
+                parser::section::SectionHeader::fix_section_name(string_map,section_header.clone());
+                println!("{:?}",section_header.clone());
             }
             Err(error) => {
                 println!("[!]read file fail");

@@ -40,14 +40,21 @@ impl  SectionHeader {
         return v;
 
     }
-    pub fn fix_section_name(string_table_map:HashMap<String, usize>,section_headers:Vec<SectionHeader>)->None{
 
+    pub fn fix_section_name(string_table_map:HashMap<u32, String>,section_headers:Vec<SectionHeader>){
+            for mut section_header in section_headers {
+                let sh_name = section_header.sh_name;
+                if let Some(&ref string) = string_table_map.get(&sh_name) {
+                    section_header.string_name = (*string).to_string();
+                }
+            }
+        return;
     }
 
-    pub fn parser_string_table(string_table_bytes:Vec<u8>)->HashMap<String, usize>{
+    pub fn parser_string_table(string_table_bytes:Vec<u8>)->HashMap<u32, String>{
         let mut result = HashMap::new();
         let mut start = 0;
-        let mut index = 0;
+        let mut index:u32 = 0;
         while start < string_table_bytes.len() {
             // Find the end of the current string
             let end = start + string_table_bytes[start..].iter().position(|&b| b == 0).unwrap();
@@ -56,7 +63,7 @@ impl  SectionHeader {
             let s = String::from_utf8_lossy(&string_table_bytes[start..end]).to_string();
 
             // Add the string and its index to the result
-            result.insert(s, index);
+            result.insert(index, s);
 
             // Move to the next string (add 1 to account for the null terminator)
             start = end + 1;
