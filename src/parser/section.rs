@@ -1,7 +1,7 @@
 use crate::parser::endian::{AnyEndian, EndianParse};
 use crate::parser::file::Class;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+use std::collections::HashMap;
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SectionHeader {
     /// Section Name
     pub sh_name: u32,
@@ -23,15 +23,55 @@ pub struct SectionHeader {
     pub sh_addralign: u64,
     /// size of an entry if section data is an array of entries
     pub sh_entsize: u64,
+    pub string_name:String,
+    pub index:u16,
 }
 
 impl  SectionHeader {
-    fn parse_at(
-        endian: AnyEndian,
-        class: Class,
+    pub fn parse_section(ident: (AnyEndian, Class),section_bytes:Vec<u8>,e_shnum:u16,e_shsz:u16)->Vec<SectionHeader>{
+        let mut v: Vec<SectionHeader> = Vec::new();
+        //let (endian, class)=ident;
+        for i in 0..e_shnum{
+            println!("{}",i);
+            let e_shdr=Self::parse_at(ident, (i * e_shsz) as usize, section_bytes.as_slice(),i);
+            v.push(e_shdr);
+        }
+
+        return v;
+
+    }
+    pub fn fix_section_name(string_table_map:HashMap<String, usize>,section_headers:Vec<SectionHeader>)->None{
+
+    }
+
+    pub fn parser_string_table(string_table_bytes:Vec<u8>)->HashMap<String, usize>{
+        let mut result = HashMap::new();
+        let mut start = 0;
+        let mut index = 0;
+        while start < string_table_bytes.len() {
+            // Find the end of the current string
+            let end = start + string_table_bytes[start..].iter().position(|&b| b == 0).unwrap();
+
+            // Convert the bytes to a UTF-8 string
+            let s = String::from_utf8_lossy(&string_table_bytes[start..end]).to_string();
+
+            // Add the string and its index to the result
+            result.insert(s, index);
+
+            // Move to the next string (add 1 to account for the null terminator)
+            start = end + 1;
+            index += 1;
+        }
+        result
+
+    }
+    pub(crate) fn parse_at(
+        ident: (AnyEndian, Class),
         mut offset: usize,
         data: &[u8],
+        index:u16,
     ) -> SectionHeader {
+        let (endian, class)=ident;
         const U64SIZE: usize = core::mem::size_of::<u64>();
         const U32SIZE: usize = core::mem::size_of::<u32>();
         const U16SIZE: usize = core::mem::size_of::<u16>();
@@ -67,6 +107,8 @@ impl  SectionHeader {
                  sh_info: sh_info,
                  sh_addralign: sh_addralign,
                  sh_entsize: sh_entsize,
+                 string_name:"".to_string(),
+                 index:index,
             });
         }
 
@@ -100,6 +142,8 @@ impl  SectionHeader {
             sh_info: sh_info,
             sh_addralign: sh_addralign,
             sh_entsize: sh_entsize,
+            string_name:"".to_string(),
+            index:index,
         });
     }
 

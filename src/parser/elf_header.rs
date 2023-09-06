@@ -238,24 +238,46 @@ pub mod elf_header {
                 println!("{}",program_header_end);
                 println!("{}",program_header_offset);
                 //println!("{:?}",binary_header.expect("REASON").len());
-                let program_header=ProgramHeader::parse_at(idents1, 0, &program_header.unwrap());
+                let program_header=ProgramHeader::parse_at
+                    (idents1, 0, &program_header.unwrap());
                 println!("{:?}",program_header);
 
 
-                let program_bytes=file::file_utils::read_file_range(file_path,program_header.p_offset+ProgramHeader::size_for(class) as u64,program_header.p_offset+program_header.p_filesz);
+                let program_bytes=file::file_utils::read_file_range
+                    (file_path,program_header.p_offset+ProgramHeader::size_for(class) as u64,program_header.p_offset+program_header.p_filesz);
                 println!("{:?}",program_bytes);
                 let e_phnum=binary_header.e_phnum;
                 let e_phsz=binary_header.e_phentsize;
+                let e_shnum=binary_header.e_shnum;
+                let e_shsz=binary_header.e_shentsize;
+                let e_shoff=binary_header.e_shoff;
+                let e_shstrndx=binary_header.e_shstrndx;
                 if ProgramHeader::check_program_size(binary_header,program_header){
                         println!("[!]ProgramHeader fail!");
                         return false;
                 }
-
                 let vec_header=ProgramHeader::parse_program
                     (idents1.clone(),program_bytes.unwrap(),e_phnum,e_phsz);
                 println!("{:?}",vec_header);
+                let section_bytes=file::file_utils::read_file_range
+                    (file_path,e_shoff,(e_shoff+(e_shsz*e_shnum) as u64));
                 //解析section
+                let section_header=parser::section::SectionHeader::parse_section
+                    (idents1, section_bytes.unwrap(), e_shnum,e_shsz);
+                println!("{:?}",section_header);
+                //解析section string tables
+                if e_shstrndx>= section_header.len() as u16 {
+                    return  false;
+                }
+                let e_shstr=&section_header[e_shstrndx as usize];
+                let e_shstr_offset=e_shstr.sh_offset;
+                let e_shstr_size=e_shstr.sh_size;
 
+                let string_table_bytes=file::file_utils::read_file_range
+                    (file_path,e_shstr_offset,e_shstr_offset+e_shstr_size);
+                let string_map=parser::section::SectionHeader::parser_string_table(string_table_bytes.unwrap());
+                println!("{:?}",string_map);
+                //获取修复section header的名字
 
 
             }
