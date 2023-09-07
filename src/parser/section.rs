@@ -41,14 +41,15 @@ impl  SectionHeader {
 
     }
 
-    pub fn fix_section_name(string_table_map:HashMap<u32, String>,section_headers:Vec<SectionHeader>){
-            for mut section_header in section_headers {
-                let sh_name = section_header.sh_name;
-                if let Some(&ref string) = string_table_map.get(&sh_name) {
-                    section_header.string_name = (*string).to_string();
-                }
+    pub fn fix_section_name(string_table_map:HashMap<u32, String>, mut section_headers:Vec<SectionHeader>)->Vec<SectionHeader>{
+        for mut section_header in  section_headers.iter_mut() {
+            let sh_name = section_header.sh_name;
+            if let Some(string) = string_table_map.get(&sh_name) {
+                section_header.string_name = string.to_string();
             }
-        return;
+        }
+        //println!("{:?}",section_headers);
+        return section_headers;
     }
 
     pub fn parser_string_table(string_table_bytes:Vec<u8>)->HashMap<u32, String>{
