@@ -73,6 +73,28 @@ impl  SectionHeader {
         result
 
     }
+    pub fn find_section_header_by_name(section_headers:Vec<SectionHeader>,name:String)
+        ->i64{
+        let mut count:i64=0;
+        for section_header in section_headers{
+           if section_header.string_name==name{
+               return count;
+           }
+            count+=1;
+        }
+        return -1;
+    }
+    pub fn find_section_header_by_type(section_headers:Vec<SectionHeader>,sh_type:u32)
+                                       ->i64{
+        let mut count:i64=0;
+        for section_header in section_headers{
+            if section_header.sh_type==sh_type{
+                return count;
+            }
+            count+=1;
+        }
+        return -1;
+    }
     pub(crate) fn parse_at(
         ident: (AnyEndian, Class),
         mut offset: usize,

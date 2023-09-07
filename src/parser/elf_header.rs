@@ -102,7 +102,7 @@ pub struct Elf64_Ehdr {
 pub mod elf_header {
     use std::string::ParseError;
     use crate::parser;
-    use crate::parser::{abi, endian, file};
+    use crate::parser::{abi, endian, file, symbol};
     use crate::parser::elf_header::{Class, FileHeader};
     use crate::parser::endian::{AnyEndian, EndianParse};
     use crate::parser::segment::ProgramHeader;
@@ -280,7 +280,26 @@ pub mod elf_header {
                 //获取修复section header的名字
                 let section_header=parser::section::SectionHeader::fix_section_name(string_map,section_header.clone());
                 println!("{:?}",section_header.clone());
-                //
+                //寻找symbol表并且读取symbol表的内容
+                //SHT_DYNSYM=11
+                let symbol_index=parser::section::SectionHeader::
+                find_section_header_by_type(section_header.clone(), 11);
+                let symbol_section_header=&section_header[symbol_index as usize];
+                //解析symbol
+                let offset=symbol_section_header.sh_offset;
+                let size=symbol_section_header.sh_size;
+                let symbol_bytes=file::file_utils::read_file_range
+                    (file_path,offset,offset+size);
+                let symbol_bytes_u8=symbol_bytes.unwrap();
+                //检查读写大小是否能够被长度整除
+                if symbol_bytes_u8.len()%parser::symbol::Symbol::size_for(class)!=0{
+                    return false;
+                }
+                //还需要写一个大的函数解析所有的symbol_header
+                let symbol_header=parser::symbol::Symbol::parser_Symbol(idents1,symbol_bytes_u8.as_slice(),0);
+                println!("{:?}",symbol_header);
+
+
             }
             Err(error) => {
                 println!("[!]read file fail");
