@@ -258,13 +258,13 @@ pub mod elf_header {
                 }
                 let vec_header=ProgramHeader::parse_program
                     (idents1.clone(),program_bytes.unwrap(),e_phnum,e_phsz);
-                println!("{:?}",vec_header);
+                //println!("{:?}",vec_header);
                 let section_bytes=file::file_utils::read_file_range
                     (file_path,e_shoff,(e_shoff+(e_shsz*e_shnum) as u64));
                 //解析section
                 let section_header=parser::section::SectionHeader::parse_section
                     (idents1, section_bytes.unwrap(), e_shnum,e_shsz);
-                println!("{:?}",section_header);
+                //println!("{:?}",section_header);
                 //解析section string tables
                 if e_shstrndx>= section_header.len() as u16 {
                     return  false;
@@ -295,9 +295,19 @@ pub mod elf_header {
                 if symbol_bytes_u8.len()%parser::symbol::Symbol::size_for(class)!=0{
                     return false;
                 }
-                //还需要写一个大的函数解析所有的symbol_header
+                //解析符号表
                 let symbol_header=parser::symbol::Symbol::parser_Symbol(idents1,symbol_bytes_u8.as_slice(),0);
                 println!("{:?}",symbol_header);
+                //解析符号字符串表
+                let symbol_str_header_idx=parser::section::SectionHeader::
+                find_section_header_by_name(section_header.clone(),(&".dynstr").to_string());
+                //获取符号str表
+                let symbol_str_section_header=&section_header[symbol_str_header_idx as usize];
+                let e_shstr_offset=symbol_str_section_header.sh_offset;
+                let e_shstr_size=symbol_str_section_header.sh_size;
+                let symbol_str_byte=file::file_utils::read_file_range(file_path,e_shstr_offset,e_shstr_offset+e_shstr_size);
+                let symbol_map_string=parser::section::SectionHeader::parser_string_table(symbol_str_byte.unwrap());
+                println!("{:?}",symbol_map_string);
 
 
             }

@@ -55,7 +55,6 @@ impl  SectionHeader {
     pub fn parser_string_table(string_table_bytes:Vec<u8>)->HashMap<u32, String>{
         let mut result = HashMap::new();
         let mut start = 0;
-        let mut index:u32 = 0;
         while start < string_table_bytes.len() {
             // Find the end of the current string
             let end = start + string_table_bytes[start..].iter().position(|&b| b == 0).unwrap();
@@ -64,11 +63,10 @@ impl  SectionHeader {
             let s = String::from_utf8_lossy(&string_table_bytes[start..end]).to_string();
 
             // Add the string and its index to the result
-            result.insert(index, s);
+            result.insert(start as u32, s);
 
             // Move to the next string (add 1 to account for the null terminator)
             start = end + 1;
-            index += 1;
         }
         result
 
