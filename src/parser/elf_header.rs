@@ -308,6 +308,18 @@ pub mod elf_header {
                 let symbol_str_byte=file::file_utils::read_file_range(file_path,e_shstr_offset,e_shstr_offset+e_shstr_size);
                 let symbol_map_string=parser::section::SectionHeader::parser_string_table(symbol_str_byte.unwrap());
                 println!("{:?}",symbol_map_string);
+                //todo hash表编写
+                let hash_table_idx=parser::section::SectionHeader::
+                find_section_header_by_type(section_header.clone(),1879048182);
+                //println!("{:?}",hash_table_idx);
+                let hash_section=&section_header[hash_table_idx as usize];
+                let e_shstr_offset=hash_section.sh_offset;
+                let e_shstr_size=hash_section.sh_size;
+                
+                //todo 修复符号表内容
+
+
+                //todo 重定位表编写
 
 
             }
