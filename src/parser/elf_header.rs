@@ -258,7 +258,7 @@ pub mod elf_header {
                 }
                 let vec_header=ProgramHeader::parse_program
                     (idents1.clone(),program_bytes.unwrap(),e_phnum,e_phsz);
-                //println!("{:?}",vec_header);
+                println!("{:?}",vec_header);
                 let section_bytes=file::file_utils::read_file_range
                     (file_path,e_shoff,(e_shoff+(e_shsz*e_shnum) as u64));
                 //解析section
@@ -308,20 +308,62 @@ pub mod elf_header {
                 let symbol_str_byte=file::file_utils::read_file_range(file_path,e_shstr_offset,e_shstr_offset+e_shstr_size);
                 let symbol_map_string=parser::section::SectionHeader::parser_string_table(symbol_str_byte.unwrap());
                 println!("{:?}",symbol_map_string);
-                //todo hash表编写
+
+                //修复符号表内容
+                let symbol_headers=parser::symbol::Symbol::fix_symbol_name(symbol_map_string,symbol_header);
+                println!("{:?}",symbol_headers);
+
+                //寻找hash表
                 let hash_table_idx=parser::section::SectionHeader::
                 find_section_header_by_type(section_header.clone(),1879048182);
                 //println!("{:?}",hash_table_idx);
-                let hash_section=&section_header[hash_table_idx as usize];
-                let e_shstr_offset=hash_section.sh_offset;
-                let e_shstr_size=hash_section.sh_size;
-                
-                //todo 修复符号表内容
+                let hash_section_header=&section_header[hash_table_idx as usize];
 
 
-                //todo 重定位表编写
+
+                let e_hash_offset=hash_section_header.sh_offset;
+                let e_hash_size=hash_section_header.sh_size;
 
 
+                //读取hash表
+                let hash_bytes=file::file_utils::read_file_range(file_path,e_hash_offset,e_hash_offset+e_hash_size);
+                let hash_tables=parser::hash::hash::parser_hash_tables(idents1,&hash_bytes.unwrap());
+                println!("{:?}",hash_tables);
+                let mut count=0;
+                for symbol_header in symbol_headers.clone(){
+                    let res=hash_tables.find(symbol_headers.clone(),symbol_header.string_name.as_bytes(),class);
+                    match res {
+                        Some((index, character)) => {
+                            println!("gun hash:Symbol at index {}: {:?}", index, character);
+                            count+=1;
+                        },
+                        None => {
+                            println!("No symbol found.");
+                        },
+                    }
+                }
+                //寻找重定位表
+                let rela_dyn_table_idx=parser::section::SectionHeader::
+                find_section_header_by_name(section_header.clone(),".rela.dyn".to_string());
+                let rela_plt_table_idx=parser::section::SectionHeader::
+                find_section_header_by_name(section_header.clone(),".rela.plt".to_string());
+                println!("{}",count);
+                let rela_dyn_table=&section_header[rela_dyn_table_idx as usize];
+                let rela_plt_table=&section_header[rela_plt_table_idx as usize];
+
+
+                let e_rela_offset=rela_dyn_table.sh_offset;
+                let e_rela_size=rela_dyn_table.sh_size;
+                let rela_bytes=file::file_utils::
+                read_file_range(file_path,e_rela_offset,e_rela_offset+e_rela_size);
+                let rela_dyn_tables=parser::relocation::Rela::parse(idents1,&rela_bytes.unwrap(),e_rela_size);
+                println!("{:?}",rela_dyn_tables);
+                let e_rela_offset=rela_plt_table.sh_offset;
+                let e_rela_size=rela_plt_table.sh_size;
+                let rela_bytes=file::file_utils::
+                read_file_range(file_path,e_rela_offset,e_rela_offset+e_rela_size);
+                let rela_plt_tables=parser::relocation::Rela::parse(idents1,&rela_bytes.unwrap(),e_rela_size);
+                println!("{:?}",rela_plt_tables);
             }
             Err(error) => {
                 println!("[!]read file fail");
