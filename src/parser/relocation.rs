@@ -1,6 +1,9 @@
-
+use crate::parser;
+use crate::parser::elf_header::FileHeader;
 use crate::parser::endian::{AnyEndian, EndianParse};
+use crate::parser::file;
 use crate::parser::file::Class;
+use crate::parser::section::SectionHeader;
 
 #[derive(Debug)]
 #[repr(C)]
@@ -99,17 +102,31 @@ pub struct Rela {
 
 
 impl Rela {
+    pub fn read_rela(file_path:&str,name:String,section_header:Vec<SectionHeader>,binary_header:FileHeader)->Option<Vec<Rela>>{
+        let idents=(binary_header.endianness,binary_header.class);
+        let rela_table_idx=parser::section::SectionHeader::
+        find_section_header_by_name(section_header.clone(),name);
+        let rela_table=&section_header[rela_table_idx as usize];
 
+        if rela_table_idx==0{
+            return None;
+        }
+        let e_rela_offset=rela_table.sh_offset;
+        let e_rela_size=rela_table.sh_size;
+        let rela_bytes=file::file_utils::
+        read_file_range(file_path,e_rela_offset,e_rela_offset+e_rela_size);
+        let rela_tables=parser::relocation::Rela::parse(idents,&rela_bytes.unwrap(),e_rela_size);
+        println!("[*]解析重定位表成功");
+        println!("{:?}",rela_tables);
+        return Some(rela_tables);
+
+    }
     pub fn parse(ident: (AnyEndian, Class),data: &[u8],e_size:u64)->Vec<Rela>{
         let mut v: Vec<Rela> = Vec::new();
         let mut offset:u64=0;
         let (_,class)=ident;
         let size=Self::size_for(class);
-        println!("{offset}");
-        println!("123123123123");
         while  offset< e_size {
-            println!("{offset}");
-            println!("{e_size}");
             let ele=Self::parse_rela(ident,data,offset as usize);
             offset+=(size as u64);
             v.push(ele);
@@ -139,10 +156,8 @@ impl Rela {
             Class::ELF64 => {
                 let r_offset = endian.parse_u64_at(offset as usize, data);
                 offset+=U64SIZE;
-                println!("{}",offset);
                 let r_info = endian.parse_u64_at(offset as usize, data);
                 offset+=U64SIZE;
-                println!("{}",offset);
                 let r_addend = endian.parse_i64_at(offset as usize, data);
                 Rela {
                     r_offset,

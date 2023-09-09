@@ -2,7 +2,7 @@ use crate::parser::{abi, file};
 use crate::parser::endian::{AnyEndian, EndianParse};
 use crate::parser::file::Class;
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Copy,Clone)]
 pub struct FileHeader {
     /// 32-bit vs 64-bit
     pub class: Class,
@@ -202,44 +202,48 @@ pub mod elf_header {
 
     }
 
+    pub fn read_header(file_path: &str)->Option<(FileHeader)>{
+        let headr = file::file_utils::read_file_range(file_path, 0, 16).unwrap();
+        if headr.len() != 16 {
+            return None;
+        }
 
+        if !verify_magic(headr.clone()) {
+            return None;
+        }
+        let ident=parse_ident(headr);
+        let idents=ident.clone().unwrap();
+        let header_size = match idents.1{
+            Class::ELF32 =>0x34,
+            Class::ELF64 => 0x40,
+        };
+
+        let headr = file::file_utils::read_file_range(file_path, 0, header_size);
+        //读取文件头
+        let binary_header=file_header(idents,&headr.unwrap());
+        println!("[*]程序头解析成功:");
+        println!("{:?}\n", binary_header);
+
+        return Some(binary_header);
+
+    }
     pub fn read_file_range(file_path: &str) -> bool {
-        //首先读取64位数的字节数
-        let headr = file::file_utils::read_file_range(file_path, 0, 16);
 
-        match headr {
-            Ok(data) => {
-                //验证读取的字节数是否对应目标
-                if data.len() != 16 {
-                    return false;
-                }
-
-                //验证.ELF魔数
-                if !verify_magic(data.clone()) {
-                    return false;
-                }
-               let ident=parse_ident(data);
-                let idents=ident.clone().unwrap();
-                let (endian,class)=ident.clone().unwrap();
-                let idents1=ident.expect("REASON").clone();
-                let header_size = match idents.1{
-                    Class::ELF32 =>0x34,
-                    Class::ELF64 => 0x40,
-                };
-
-                let headr = file::file_utils::read_file_range(file_path, 0, header_size);
-                //读取文件头
-                let binary_header=file_header(idents,&headr.unwrap());
-                println!("{:?}", binary_header);
-                //获取segment头
-                let program_header_offset=header_size.clone();
-                let program_header_end=header_size.clone()+ProgramHeader::size_for(class) as u64;
-                let program_header=file::file_utils::read_file_range(file_path,program_header_offset,program_header_end);
-                println!("{}",program_header_end);
-                println!("{}",program_header_offset);
-                //println!("{:?}",binary_header.expect("REASON").len());
-                let program_header=ProgramHeader::parse_at
-                    (idents1, 0, &program_header.unwrap());
+        let binary_header=read_header(file_path).unwrap();
+        let header_size = match binary_header.class{
+            Class::ELF32 =>0x34,
+            Class::ELF64 => 0x40,
+        };
+        let class=binary_header.class;
+        let idents=(binary_header.endianness,binary_header.class);
+        let program_header_offset=header_size.clone();
+        let program_header_end=header_size.clone()+ProgramHeader::size_for(class) as u64;
+        let program_header=file::file_utils::read_file_range(file_path,program_header_offset,program_header_end);
+        println!("{}",program_header_end);
+        println!("{}",program_header_offset);
+        //println!("{:?}",binary_header.expect("REASON").len());
+        let program_header=ProgramHeader::parse_at
+                    (idents, 0, &program_header.unwrap());
                 println!("{:?}",program_header);
 
 
@@ -257,13 +261,13 @@ pub mod elf_header {
                         return false;
                 }
                 let vec_header=ProgramHeader::parse_program
-                    (idents1.clone(),program_bytes.unwrap(),e_phnum,e_phsz);
+                    (idents.clone(),program_bytes.unwrap(),e_phnum,e_phsz);
                 println!("{:?}",vec_header);
                 let section_bytes=file::file_utils::read_file_range
                     (file_path,e_shoff,(e_shoff+(e_shsz*e_shnum) as u64));
                 //解析section
                 let section_header=parser::section::SectionHeader::parse_section
-                    (idents1, section_bytes.unwrap(), e_shnum,e_shsz);
+                    (idents, section_bytes.unwrap(), e_shnum,e_shsz);
                 //println!("{:?}",section_header);
                 //解析section string tables
                 if e_shstrndx>= section_header.len() as u16 {
@@ -296,7 +300,7 @@ pub mod elf_header {
                     return false;
                 }
                 //解析符号表
-                let symbol_header=parser::symbol::Symbol::parser_Symbol(idents1,symbol_bytes_u8.as_slice(),0);
+                let symbol_header=parser::symbol::Symbol::parser_Symbol(idents,symbol_bytes_u8.as_slice(),0);
                 println!("{:?}",symbol_header);
                 //解析符号字符串表
                 let symbol_str_header_idx=parser::section::SectionHeader::
@@ -327,7 +331,7 @@ pub mod elf_header {
 
                 //读取hash表
                 let hash_bytes=file::file_utils::read_file_range(file_path,e_hash_offset,e_hash_offset+e_hash_size);
-                let hash_tables=parser::hash::hash::parser_hash_tables(idents1,&hash_bytes.unwrap());
+                let hash_tables=parser::hash::hash::parser_hash_tables(idents,&hash_bytes.unwrap());
                 println!("{:?}",hash_tables);
                 let mut count=0;
                 for symbol_header in symbol_headers.clone(){
@@ -356,20 +360,16 @@ pub mod elf_header {
                 let e_rela_size=rela_dyn_table.sh_size;
                 let rela_bytes=file::file_utils::
                 read_file_range(file_path,e_rela_offset,e_rela_offset+e_rela_size);
-                let rela_dyn_tables=parser::relocation::Rela::parse(idents1,&rela_bytes.unwrap(),e_rela_size);
+                let rela_dyn_tables=parser::relocation::Rela::parse(idents,&rela_bytes.unwrap(),e_rela_size);
                 println!("{:?}",rela_dyn_tables);
                 let e_rela_offset=rela_plt_table.sh_offset;
                 let e_rela_size=rela_plt_table.sh_size;
                 let rela_bytes=file::file_utils::
                 read_file_range(file_path,e_rela_offset,e_rela_offset+e_rela_size);
-                let rela_plt_tables=parser::relocation::Rela::parse(idents1,&rela_bytes.unwrap(),e_rela_size);
+                let rela_plt_tables=parser::relocation::Rela::parse(idents,&rela_bytes.unwrap(),e_rela_size);
                 println!("{:?}",rela_plt_tables);
-            }
-            Err(error) => {
-                println!("[!]read file fail");
-                return false;
-            }
-        }
+
+
         return false;
     }
 }

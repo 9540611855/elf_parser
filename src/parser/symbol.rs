@@ -1,7 +1,10 @@
 use std::collections::HashMap;
+use crate::parser;
+use crate::parser::elf_header::FileHeader;
 use crate::parser::endian::{AnyEndian, EndianParse};
 use crate::parser::file::Class;
-use crate::parser::symbol;
+use crate::parser::section::SectionHeader;
+use crate::parser::{file, symbol};
 
 /// C-style 32-bit ELF Symbol definition
 ///
@@ -48,6 +51,47 @@ pub struct Symbol {
 }
 
 impl Symbol {
+    pub fn read_symbol(file_path:&str,section_headers:Vec<SectionHeader>,binary_header:FileHeader)->Option<Vec<Symbol>>{
+        //寻找symbol表并且读取symbol表的内容
+        //SHT_DYNSYM=11
+        let idents=(binary_header.endianness,binary_header.class);
+        let symbol_index=parser::section::SectionHeader::
+        find_section_header_by_type(section_headers.clone(), 11);
+        let symbol_section_header=&section_headers[symbol_index as usize];
+        //解析symbol
+        let offset=symbol_section_header.sh_offset;
+        let size=symbol_section_header.sh_size;
+        let symbol_bytes=file::file_utils::read_file_range
+            (file_path,offset,offset+size);
+        let symbol_bytes_u8=symbol_bytes.unwrap();
+        //检查读写大小是否能够被长度整除
+        if symbol_bytes_u8.len()%Symbol::size_for(binary_header.class)!=0{
+            return None;
+        }
+        //解析符号表
+        let symbol_header=Symbol::parser_Symbol(idents,symbol_bytes_u8.as_slice(),0);
+        println!("{:?}",symbol_header);
+        return Some(symbol_header);
+    }
+    pub fn parser_str_symbol(file_path:&str,section_header:Vec<SectionHeader>)->Option<HashMap<u32,String>>{
+        //解析符号字符串表
+        let symbol_str_header_idx=SectionHeader::
+        find_section_header_by_name(section_header.clone(),(&".dynstr").to_string());
+        //获取符号str表
+        if symbol_str_header_idx==-1{
+            return None;
+        }
+        let symbol_str_section_header=&section_header[symbol_str_header_idx as usize];
+        let e_shstr_offset=symbol_str_section_header.sh_offset;
+        let e_shstr_size=symbol_str_section_header.sh_size;
+        let symbol_str_byte=file::file_utils::read_file_range(file_path,e_shstr_offset,e_shstr_offset+e_shstr_size);
+        let symbol_map_string=parser::section::SectionHeader::parser_string_table(symbol_str_byte.unwrap());
+        println!("[*]符号字符串表解析成功:");
+        println!("{:?}",symbol_map_string);
+        return Some(symbol_map_string);
+
+    }
+
     pub fn parser_Symbol(ident: (AnyEndian, Class),data:&[u8],mut offset: usize)->Vec<Symbol>{
         let (endian, class)=ident;
         let mut symbol_tables:Vec<Symbol>=Vec::new();

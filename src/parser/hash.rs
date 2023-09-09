@@ -1,7 +1,11 @@
 use std::mem::size_of;
 use std::ops::Add;
+use crate::parser;
+use crate::parser::elf_header::FileHeader;
 use crate::parser::endian::{AnyEndian, EndianParse};
+use crate::parser::file;
 use crate::parser::file::Class;
+use crate::parser::section::SectionHeader;
 use crate::parser::symbol::Symbol;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +25,46 @@ pub struct hash {
 }
 
 impl hash {
+    pub fn all_sym_find(symbol_headers:Vec<Symbol>,hash_tables:hash,binary_header:FileHeader)->u32{
+        let mut count =0;
+        for symbol_header in symbol_headers.clone(){
+            let res=hash_tables.find(symbol_headers.clone(),symbol_header.string_name.as_bytes(),binary_header.class);
+            match res {
+                Some((index, character)) => {
+                    println!("[*]gun hash:Symbol at index {}: {:?}", index, character);
+                    count+=1;
+                },
+                None => {
+
+                },
+                }
+            }
+            return  count;
+
+    }
+    pub fn read_hash(file_path:&str,section_headers:Vec<SectionHeader>,binary_header:FileHeader)->Option<hash>{
+        let idents=(binary_header.endianness,binary_header.class);
+        //寻找hash表
+        let hash_table_idx=parser::section::SectionHeader::
+        find_section_header_by_type(section_headers.clone(),1879048182);
+        //println!("{:?}",hash_table_idx);
+        if hash_table_idx==-1{
+            return None;
+        }
+        let hash_section_header=&section_headers[hash_table_idx as usize];
+
+
+
+        let e_hash_offset=hash_section_header.sh_offset;
+        let e_hash_size=hash_section_header.sh_size;
+
+
+        //读取hash表
+        let hash_bytes=file::file_utils::read_file_range(file_path,e_hash_offset,e_hash_offset+e_hash_size);
+        let hash_tables=hash::parser_hash_tables(idents,&hash_bytes.unwrap());
+        println!("{:?}",hash_tables);
+        return Some(hash_tables);
+    }
     pub fn gnu_hash(name: &[u8]) -> u32 {
         let mut hash = 5381u32;
         for byte in name {

@@ -1,5 +1,6 @@
 use crate::parser::elf_header::FileHeader;
 use crate::parser::endian::{AnyEndian, EndianParse};
+use crate::parser::file;
 use crate::parser::file::Class;
 #[derive(Debug)]
 #[repr(C)]
@@ -54,6 +55,38 @@ impl ProgramHeader {
     /// Helper method which uses checked integer math to get a tuple of (start, end) for
     /// the location in bytes for this ProgramHeader's data in the file.
     /// i.e. (p_offset, p_offset + p_filesz)
+
+    pub fn read_program(file_path:&str,binary_header:FileHeader)->Option<Vec<ProgramHeader>>{
+        let header_size = match binary_header.class{
+            Class::ELF32 =>0x34,
+            Class::ELF64 => 0x40,
+        };
+        let class=binary_header.class;
+        let idents=(binary_header.endianness,binary_header.class);
+        let program_header_offset=header_size.clone();
+        let program_header_end=header_size.clone()+ProgramHeader::size_for(class) as u64;
+        let program_header=file::file_utils::read_file_range(file_path,program_header_offset,program_header_end);
+        //println!("{:?}",binary_header.expect("REASON").len());
+        let program_header=ProgramHeader::parse_at
+            (idents, 0, &program_header.unwrap());
+        println!("[*]程序头部表头解析成功\n");
+        println!("{:?}",program_header);
+
+
+        let program_bytes=file::file_utils::read_file_range
+            (file_path,program_header.p_offset+ProgramHeader::size_for(class) as u64,program_header.p_offset+program_header.p_filesz);
+        let e_phnum=binary_header.e_phnum;
+        let e_phsz=binary_header.e_phentsize;
+        if ProgramHeader::check_program_size(binary_header,program_header){
+            return None;
+        }
+        let vec_header=ProgramHeader::parse_program
+            (idents.clone(),program_bytes.unwrap(),e_phnum,e_phsz);
+        println!("[*]程序头部表解析成功:");
+        println!("{:?}",vec_header);
+        return Some(vec_header);
+
+    }
     pub(crate) fn get_file_data_range(&self) -> (usize, usize){
         let start: usize = self.p_offset.try_into().expect("Failed to convert u64 to usize");
         let size: usize = self.p_filesz.try_into().expect("Failed to convert u64 to usize");
@@ -63,8 +96,6 @@ impl ProgramHeader {
     pub fn parse_program(ident: (AnyEndian, Class),program_bytes:Vec<u8>,e_phnum:u16,e_phsz:u16)->Vec<ProgramHeader>{
         let mut v: Vec<ProgramHeader> = Vec::new();
         for i in 0..e_phnum-1{
-            println!("{}",i);
-            println!("{}",i*e_phsz);
             let e_phdr=Self::parse_at(ident, (i * e_phsz) as usize, program_bytes.as_slice());
             v.push(e_phdr);
         }

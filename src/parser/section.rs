@@ -1,6 +1,10 @@
 use crate::parser::endian::{AnyEndian, EndianParse};
 use crate::parser::file::Class;
 use std::collections::HashMap;
+use crate::parser;
+use crate::parser::elf_header::FileHeader;
+use crate::parser::file;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SectionHeader {
     /// Section Name
@@ -28,11 +32,41 @@ pub struct SectionHeader {
 }
 
 impl  SectionHeader {
+
+    pub fn parser_string_section(file_path:&str,section_headers:Vec<SectionHeader>,binary_header:FileHeader)->Option<HashMap<u32,String>>{
+        let e_shstrndx=binary_header.e_shstrndx;
+        if e_shstrndx>= section_headers.len() as u16 {
+            return  None;
+        }
+        let e_shstr=&section_headers[e_shstrndx as usize];
+        let e_shstr_offset=e_shstr.sh_offset;
+        let e_shstr_size=e_shstr.sh_size;
+
+        let string_table_bytes=file::file_utils::read_file_range
+            (file_path,e_shstr_offset,e_shstr_offset+e_shstr_size);
+        let string_map=parser::section::SectionHeader::parser_string_table(string_table_bytes.unwrap());
+        println!("[*]字符表节区解析成功:");
+        println!("{:?}",string_map);
+        return Some(string_map);
+    }
+    pub  fn read_section(file_path:&str,binary_header:FileHeader)->Option<Vec<SectionHeader>>{
+        let e_shnum=binary_header.e_shnum;
+        let e_shsz=binary_header.e_shentsize;
+        let e_shoff=binary_header.e_shoff;
+        let idents=(binary_header.endianness,binary_header.class);
+        let section_bytes=file::file_utils::read_file_range
+            (file_path,e_shoff,(e_shoff+(e_shsz*e_shnum) as u64));
+        //解析section
+        let section_header=SectionHeader::parse_section
+            (idents, section_bytes.unwrap(), e_shnum,e_shsz);
+        println!("[*]程序节区解析成功:");
+        println!("{:?}",section_header);
+        return Some(section_header);
+    }
     pub fn parse_section(ident: (AnyEndian, Class),section_bytes:Vec<u8>,e_shnum:u16,e_shsz:u16)->Vec<SectionHeader>{
         let mut v: Vec<SectionHeader> = Vec::new();
         //let (endian, class)=ident;
         for i in 0..e_shnum{
-            println!("{}",i);
             let e_shdr=Self::parse_at(ident, (i * e_shsz) as usize, section_bytes.as_slice(),i);
             v.push(e_shdr);
         }
